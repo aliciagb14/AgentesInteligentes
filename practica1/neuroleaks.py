@@ -79,13 +79,12 @@ def extract(n, since=None):
                 soup2 = b(contentEnlace, 'lxml') 
                 #print(soup2.prettify())
                 divArt = soup2.find('div', {'class': 'article-details'})
-                
-                fecha_pattern = r'\d{1,2}(0?[1-9]|[12][0-9]|3[01])\s(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s\d{4}' #/html/body/div[2]/div[2]/div[2]/div[1]/div[4]/strong
+
+                fecha_pattern = 'Publication Date:\s\d{1,2}(0?[1-9]|[12][0-9]|3[01])\s(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s(0\d{3}|[1-9]\d{3})' #'Publication Date:\s[0-9]+\s[a-zA-Z]*\s[0-9]+'
                 fecha_matches = re.findall(fecha_pattern, str(divArt))
-                for fecha_match in fecha_matches:
-                    print(fecha_match)
-    str_final = ','.join(tituloArt, fecha_match)
-    result = [str_final]
+                print('\t\t\t' + str(fecha_matches))
+    str_final = tituloArt.join(fecha_matches)
+    result = [str_final.join(',')]
     return result
 
 
