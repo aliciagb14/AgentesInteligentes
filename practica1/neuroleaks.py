@@ -12,6 +12,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 
 import re
+from datetime import datetime
+import calendar
 """Agente extractor de datos de artículos
 
 
@@ -62,29 +64,31 @@ def extract(n, since=None):
     soup = b(content, 'lxml')   #manipular la info en el formato html
    
     results = soup.find('div', {'class': 'row flex-column'})
-    results.get_text()
+   # results.get_text()
+   # elements = results.find_all('div', class_='panel panel-default')
     elements = results.find_all('div', class_='panel panel-default')
-    
     for element in elements:
         title = element.find('h4', class_='panel-title').text
-        nameVolume = element.find('div',{'class':'search-result'})
-        tituloArt = nameVolume.find('h2').text
-        print('\t' + title.strip() + ": " + tituloArt.strip())
+        nameVolume = re.findall('href="/article/Details/MAL-\d{3}', str(element))
+        # nameVolume = element.find('div',{'class':'search-result'})
         for h2 in element.find_all('h2'):
             for a in h2.find_all('a', href=True):
-                volumeIssue = nameVolume.find('strong').text
-                print('\t\t' + volumeIssue)
+                tituloArt = a.text
+                print('\t' + title.strip() + ": " + tituloArt.strip())
+
                 enlace = requests.get('https://www.nowpublishers.com' + a['href'])
                 contentEnlace = enlace.text 
-                soup2 = b(contentEnlace, 'lxml') 
-                #print(soup2.prettify())
+                soup2 = b(contentEnlace, 'lxml')
                 divArt = soup2.find('div', {'class': 'article-details'})
-
-                fecha_pattern = 'Publication Date:\s\d{1,2}(0?[1-9]|[12][0-9]|3[01])\s(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s(0\d{3}|[1-9]\d{3})' #'Publication Date:\s[0-9]+\s[a-zA-Z]*\s[0-9]+'
-                fecha_matches = re.findall(fecha_pattern, str(divArt))
-                print('\t\t\t' + str(fecha_matches))
-    str_final = tituloArt.join(fecha_matches)
-    result = [str_final.join(',')]
+                patron_fecha = ('[a-zA-Z]*\s[a-zA-Z]*:\s[0-9]+\s[a-zA-Z]*\s[0-9]+')
+                fecha_matches = re.findall(patron_fecha, str(divArt))
+                for fecha_match in fecha_matches:
+                    fecha = fecha_match
+                    fecha_fin = re.sub("Publication Date:", "", fecha)
+                    objdate= datetime.strptime(fecha_fin, ' %d %b %Y')
+                    print('\t\t' + objdate.strftime('%Y%m%d'))
+    str_final = tituloArt + ','
+    result = [str_final]
     return result
 
 
