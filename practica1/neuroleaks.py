@@ -69,8 +69,6 @@ def extract(n, since=None):
     elements = results.find_all('div', class_='panel panel-default')
     for element in elements:
         title = element.find('h4', class_='panel-title').text
-        nameVolume = re.findall('href="/article/Details/MAL-\d{3}', str(element))
-        # nameVolume = element.find('div',{'class':'search-result'})
         for h2 in element.find_all('h2'):
             for a in h2.find_all('a', href=True):
                 tituloArt = a.text
@@ -80,13 +78,31 @@ def extract(n, since=None):
                 contentEnlace = enlace.text 
                 soup2 = b(contentEnlace, 'lxml')
                 divArt = soup2.find('div', {'class': 'article-details'})
-                patron_fecha = ('[a-zA-Z]*\s[a-zA-Z]*:\s[0-9]+\s[a-zA-Z]*\s[0-9]+')
-                fecha_matches = re.findall(patron_fecha, str(divArt))
-                for fecha_match in fecha_matches:
+                patronFecha = ('[a-zA-Z]*\s[a-zA-Z]*:\s[0-9]+\s[a-zA-Z]*\s[0-9]+')
+                fechaMatches = re.findall(patronFecha, str(divArt))
+                for fecha_match in fechaMatches:
                     fecha = fecha_match
                     fecha_fin = re.sub("Publication Date:", "", fecha)
                     objdate= datetime.strptime(fecha_fin, ' %d %b %Y')
                     print('\t\t' + objdate.strftime('%Y%m%d'))
+                
+                divSubject = soup2.find('div',  {'class': 'col-md-9'})
+                a_tags = divSubject.find_all('a', href=re.compile('/Search\?s2='))
+
+                for a_tag in a_tags:     # Iterar sobre todas las etiquetas 'a' encontradas y obtener la información dentro de ellas
+                    print('\t\t\t' + a_tag.text.strip())    # Obtener la información dentro de la etiqueta 'a'
+                
+                divAbstract = soup2.find('div', {'class': 'col-sm-9'})
+                abstracts = divAbstract.find_all('p')
+                for abstract in abstracts:
+                    print('\n' + abstract.text + '\n')
+                # patronSubjects = ('/Search\?s2=(.+?)["&]')
+                # subjectsMatches = re.findall(patronSubjects, str(divSubject))
+                # print('\t\tSubjects:')
+                # for subject_match in subjectsMatches:
+                #     subject = subject_match
+                #     subject_fin = re.sub("/Search\?s2=", "", subject).strip()
+                #     print('\t\t\t'+ str(subject_fin))
     str_final = tituloArt + ','
     result = [str_final]
     return result
