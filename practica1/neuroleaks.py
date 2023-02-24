@@ -55,58 +55,42 @@ Palabras clave: En el caso de que exista, lista de cadenas de texto sin caracter
     :return: Una lista de tuplas donde cada tupla tendrá la
         siguiente forma: (str, str, str, str, List[str])
     """
-def extract(n, since=None):
 
-    #User-Agent: python-requests/2.28.2
-    
+def mapeo_fecha(divArt):
+
+    patronFecha = ('[a-zA-Z]*\s[a-zA-Z]*:\s[0-9]+\s[a-zA-Z]*\s[0-9]+')
+    fechaMatches = re.findall(patronFecha, str(divArt))
+    fecha_fin = re.sub("Publication Date:", "", fechaMatches[0])
+    objdate= datetime.strptime(fecha_fin, ' %d %b %Y')
+    return objdate.strftime('%Y%m%d')
+
+def extract(n, since=None):
+    listaResult = []
     html = requests.get('https://www.nowpublishers.com/MAL')
-    content = html.text         #obtener el texto de la respuesta
-    soup = b(content, 'lxml')   #manipular la info en el formato html
+    soup = b(html.text, 'lxml')   #obtener el texto de la respuesta, manipular la info en el formato html
    
     results = soup.find('div', {'class': 'row flex-column'})
-   # results.get_text()
-   # elements = results.find_all('div', class_='panel panel-default')
+
     elements = results.find_all('div', class_='panel panel-default')
     for element in elements:
         title = element.find('h4', class_='panel-title').text
         for h2 in element.find_all('h2'):
             for a in h2.find_all('a', href=True):
-                tituloArt = a.text
-                print('\t' + title.strip() + ": " + tituloArt.strip())
-
                 enlace = requests.get('https://www.nowpublishers.com' + a['href'])
-                contentEnlace = enlace.text 
-                soup2 = b(contentEnlace, 'lxml')
+                soup2 = b(enlace.text , 'lxml')
                 divArt = soup2.find('div', {'class': 'article-details'})
-                patronFecha = ('[a-zA-Z]*\s[a-zA-Z]*:\s[0-9]+\s[a-zA-Z]*\s[0-9]+')
-                fechaMatches = re.findall(patronFecha, str(divArt))
-                for fecha_match in fechaMatches:
-                    fecha = fecha_match
-                    fecha_fin = re.sub("Publication Date:", "", fecha)
-                    objdate= datetime.strptime(fecha_fin, ' %d %b %Y')
-                    print('\t\t' + objdate.strftime('%Y%m%d'))
-                
+                fechaMap = mapeo_fecha(divArt.text)
                 divSubject = soup2.find('div',  {'class': 'col-md-9'})
-                a_tags = divSubject.find_all('a', href=re.compile('/Search\?s2='))
-
-                for a_tag in a_tags:     # Iterar sobre todas las etiquetas 'a' encontradas y obtener la información dentro de ellas
-                    print('\t\t\t' + a_tag.text.strip())    # Obtener la información dentro de la etiqueta 'a'
                 
-                divAbstract = soup2.find('div', {'class': 'col-sm-9'})
-                abstracts = divAbstract.find_all('p')
-                for abstract in abstracts:
-                    print('\n' + abstract.text + '\n')
-                # patronSubjects = ('/Search\?s2=(.+?)["&]')
-                # subjectsMatches = re.findall(patronSubjects, str(divSubject))
-                # print('\t\tSubjects:')
-                # for subject_match in subjectsMatches:
-                #     subject = subject_match
-                #     subject_fin = re.sub("/Search\?s2=", "", subject).strip()
-                #     print('\t\t\t'+ str(subject_fin))
-    str_final = tituloArt + ','
-    result = [str_final]
-    return result
+                a_tags = divSubject.find_all('a', href=re.compile('/Search\?s2='))
+                patron_tag = '<a.*?>(.*?)<'
+                keyword = re.findall(patron_tag, str(a_tags))
 
+                divAbstract = soup2.find('div', {'class': 'col-sm-9'})
+                abstracts = divAbstract.find('p')
+                data = (title.strip(), a.text.strip(), fechaMap, list(keyword), abstracts.text.strip())
+                listaResult.append(data)
+    return listaResult
 
 if __name__ == '__main__':
     for row in extract(n=20):
