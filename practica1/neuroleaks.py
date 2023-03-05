@@ -6,11 +6,6 @@ from lxml import html
 import urllib
 from urllib.request import Request, urlopen
 
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-
 import re
 from datetime import datetime
 import calendar
@@ -56,7 +51,7 @@ Palabras clave: En el caso de que exista, lista de cadenas de texto sin caracter
         siguiente forma: (str, str, str, str, List[str])
     """
 
-def mapeo_fecha(divArt):
+def mapping_date(divArt):
 
     patronFecha = ('[a-zA-Z]*\s[a-zA-Z]*:\s[0-9]+\s[a-zA-Z]*\s[0-9]+')
     fechaMatches = re.findall(patronFecha, str(divArt))
@@ -64,11 +59,18 @@ def mapeo_fecha(divArt):
     objdate= datetime.strptime(fecha_fin, ' %d %b %Y')
     return objdate.strftime('%Y%m%d')
 
-def extract(n, since=None):
+def compare_dates(date_orig, date):
+    date_orig = date_orig.strftime('%Y%m%d')
+    return date_orig >= date 
+
+def extract(n, since='20100421'):
     listaResult = []
+    if since == None:
+        since = datetime.now()
+    else:
+        since = datetime.strptime(since, '%Y%m%d')
     html = requests.get('https://www.nowpublishers.com/MAL')
-    soup = b(html.text, 'lxml')   #obtener el texto de la respuesta, manipular la info en el formato html
-   
+    soup = b(html.text, 'lxml')
     results = soup.find('div', {'class': 'row flex-column'})
 
     elements = results.find_all('div', class_='panel panel-default')
@@ -79,17 +81,21 @@ def extract(n, since=None):
                 enlace = requests.get('https://www.nowpublishers.com' + a['href'])
                 soup2 = b(enlace.text , 'lxml')
                 divArt = soup2.find('div', {'class': 'article-details'})
-                fechaMap = mapeo_fecha(divArt.text)
+                fechaMap = mapping_date(divArt.text)
                 divSubject = soup2.find('div',  {'class': 'col-md-9'})
-                
-                a_tags = divSubject.find_all('a', href=re.compile('/Search\?s2='))
-                patron_tag = '<a.*?>(.*?)<'
-                keyword = re.findall(patron_tag, str(a_tags))
-
                 divAbstract = soup2.find('div', {'class': 'col-sm-9'})
-                abstracts = divAbstract.find('p')
-                data = (title.strip(), a.text.strip(), fechaMap, list(keyword), abstracts.text.strip())
-                listaResult.append(data)
+                
+                if (compare_dates(since, fechaMap)):
+                    a_tags = divSubject.find_all('a', href=re.compile('/Search\?s2='))
+                    patron_tag = '<a.*?>(.*?)<'
+                    keyword = re.findall(patron_tag, str(a_tags))
+
+                    abstracts = divAbstract.find('p')
+                    # abstracts_ser = divAbstract.find_all('p')
+                    # abstracts = re.findall('<p>(.*?)<', str(abstracts_ser))
+                
+                    data = (title.strip(), a.text.strip(), fechaMap, list(keyword), abstracts.text.strip().replace('\n', ''))
+                    listaResult.append(data)
     return listaResult
 
 if __name__ == '__main__':
