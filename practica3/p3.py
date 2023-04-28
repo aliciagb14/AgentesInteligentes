@@ -4,6 +4,7 @@ import urllib
 import requests
 
 import numpy as np
+import collections
 
 # - La piedra aplasta la tijera y aplasta al lagarto
 # - La tijera corta el papel y decapita al lagarto
@@ -88,16 +89,8 @@ class Agent:
         if q_table:
             self.q_table = q_table
         else:
-            self.q_table = {}
-           # self.q_table = {(state, a.value): 0.0 for state in range(5) for actions in Action}
-          #  actions = [Action.ROCK, Action.PAPER, Action.SCISSORS, Action.LIZARD, Action.SPOCK]
-            #for s in range(5): #estado es siempre 1, asi que esto no
-            
-            # for a in Action:
-            #     #self.q_table.setdefault((s, a), 0.0)
-            #     self.q_table.setdefault(a, {a.value: 0 for a in Action})
-            
-            self.q_table = {a.value: {b.value: 0.0 for b in Action} for a in Action}
+            self.q_table = {}  
+            self.q_table = {b.value: 0.0 for b in Action}
                 
     def decide(self, state:int, 𝜀: typing.SupportsFloat=0.0) -> Action:
         """Decide la acción a ejecutar.
@@ -116,8 +109,15 @@ class Agent:
         
         if np.random.random() < 𝛆:
             return np.random.choice(list(Action))
-        argmax = np.argmax(self.q_table[state])
-        return list(Action)[argmax]
+        if state in self.q_table:
+            argmax = np.argmax(self.q_table[state])
+            return list(Action)[argmax]
+        else:
+            self.q_table[state] = {}
+            for action in Action:
+                self.q_table[state][action.value] = 0.0
+            return np.random.choice(list(Action))
+
        
 
     def update(self, t: Transition, 𝛼=0.1, 𝛾=0.95):
@@ -132,18 +132,6 @@ class Agent:
             valor actual). Por defecto es 0.95.
         """
         
-        print("empezamos update")
-        print(self.q_table)
-        #  # agregamos la clave a q_table si no existe todavía
-        # if (t.prev_state, Action(t.action)) not in self.q_table:
-        #     self.q_table[(t.prev_state, Action(t.action))] = {a.value: 0 for a in Action}
-        # prev_q = self.get_q_value(t.prev_state, Action(t.action))
-        # next_max_q = self.get_max_q_value(t.next_state)
-        # new_q = prev_q + 𝛼 * (t.reward + 𝛾 * next_max_q - prev_q)
-        # self.set_q_value(t.prev_state, Action(t.action), new_q)
-
-        # if t.action.value not in self.q_table[t.prev_state]:
-        #     self.q_table[t.prev_state][t.action.value] = (np.random.uniform(-0.1, 0.1), 0)
         if t.prev_state not in self.q_table:
             self.q_table[t.prev_state] = {}
         if t.action not in self.q_table[t.prev_state]:
@@ -161,8 +149,7 @@ class Agent:
         # se actualiza la tabla Q con el nuevo valor Q para el par estado-acción previo.
         self.q_table[t.prev_state][t.action.value] = new_q
         # Guardamos la tabla actualizada en una variable de cadena
-        updated_table = str(self.q_table)
-        print("acabamos update")
+        # self.updated_table = self.q_table.copy()
         print(self.q_table)
     
     def __str__(self) -> str:
@@ -170,31 +157,11 @@ class Agent:
         
         :returns: Una cadena indicando la estructura interna de la tabla Q.
         """
-        # q_str = ""
-        # for state in range(5):
-        #     for action in Action:
-        #         if (state, action) not in self.q_table:
-        #             self.q_table[state, action.value] = 0.0  # o cualquier otro valor predeterminado que desees
-        #         q_str += f"({state}, {action}): {self.q_table[state, action.value]}\n"
-        # return q_str
-    
-        # q_str = f"{self.name}'s Q-table:\n"
-        # for action in Action:
-        #     q_str += f"{action}: {self.q_table[action.value]}\n"
-        # return q_str
         
-        # q_table_str = ""
-        # for state, actions in self.q_table.items():
-        #     q_table_str += f"{state}: {actions}\n"
-        # return f"{self.name} - Q Table:\n{q_table_str}"
-        
-        table_str = f"{self.name} - Q Table:\n"
-        for state, actions in self.q_table.items():
-            table_str += f"{state}: {actions}\n"
+        table_str = "Agent - Q Table:\n"
+        for actions in self.q_table.items():
+            table_str += f"{actions}\n"
         return table_str
-        
-        
-        
         
 dataset_url = 'https://blazaid.github.io/Aprendizaje-profundo/Datasets/rock-paper-scissors-lizard-spock.trn'
 
@@ -229,4 +196,38 @@ for p2_action in player2_actions:
     𝜀 -= 𝛿𝜀 if 𝜀 > 0 else 0
 
 #Tras entrenarlo, veremos como estan repartidos los valores de la tabla Q
-print(agent.__str__())
+print("tras entrenarlo el valor es: \n")
+print(agent)
+
+
+
+# dataset_url = 'https://blazaid.github.io/Aprendizaje-profundo/Datasets/rock-paper-scissors-lizard-spock.tst'
+
+# player2_actions = []
+# with urllib.request.urlopen(dataset_url) as f:
+#     for line in f:
+#         move = line.decode('utf-8').strip().upper()
+#         if move:
+#             player2_actions.append(Action[move])
+
+# stats = collections.defaultdict(int)
+# state = 0
+# game = Game()
+# agent = Agent(name='Agent')
+# for p2_action in player2_actions:
+#     p1_action = agent.decide(state)
+#     reward = game.play(p1_action, p2_action)
+#     agent.update(Transition(
+#         prev_state=state,
+#         next_state=state,
+#         action=p1_action,
+#         reward=reward
+#     ))
+#     if reward == 1:
+#         stats['wins'] += 1
+#     elif reward == -1:
+#         stats['loses'] += 1
+#     else:
+#         stats['ties'] += 1
+
+# print(dict(stats))
